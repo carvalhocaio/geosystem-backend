@@ -1,0 +1,123 @@
+INSERT_TALHAO = """
+BEGIN
+    DECLARE
+
+    V_TALHAO VARCHAR2(100);
+    V_FAZ NUMBER;
+    V_JSON1 CLOB;
+    V_DATA_INI DATE;
+    V_DATA_FIM DATE;
+    V_SAFRA NUMBER;
+    V_QUERY CLOB;
+    
+    BEGIN
+    
+        V_TALHAO := '%s';
+        V_JSON1 := '%s';
+        V_FAZ := %s;
+        V_DATA_INI := TO_DATE('%s', 'YYYY-MM-DD');
+        V_DATA_FIM := TO_DATE(%s , 'YYYY-MM-DD');
+        V_SAFRA := %s;
+        
+        ETL_TEMP.LIMPA_TALHAO;
+                
+        V_QUERY := 'INSERT INTO TEMP_TALHAO(TALHAO, IDFAZENDA, DATA_INICIO, DATA_FIM, ANO_SAFRA, GEOM) VALUES(
+        :TALHAO, :FAZENDA, :DATA_INICIO, :DATA_FIM, :ANO_SAFRA, JSON_VALUE(:JSON1, ''$'' RETURNING SDO_GEOMETRY))'; 
+
+        EXECUTE IMMEDIATE V_QUERY USING V_TALHAO, V_FAZ, V_DATA_INI, V_DATA_FIM, V_SAFRA, V_JSON1;
+        
+        ETL_INSERT.TALHAO_CAD;
+        ETL_INSERT.TALHAO_GEOM;
+        
+        ETL_TEMP.LIMPA_TALHAO;
+        
+    END;
+    
+END;
+"""
+
+TALHAO_ID = """
+    SELECT  ID
+    FROM TALHAO_CADASTRO
+    WHERE NOME_TALHAO = '%s'
+"""
+
+TALHAO = """
+    SELECT  E.NOME_FAZENDA
+        ,   C.NOME_TALHAO
+        ,   D.AREA
+        ,   SDO_UTIL.TO_WKTGEOMETRY(D.GEOM) GEOM
+    FROM TALHAO_CADASTRO C
+    JOIN TALHAO_GEOM D ON(C.ID = D.TALHAO_CAD_ID)
+    JOIN TALHAO_FAZENDA E ON(E.ID = C.FAZENDA_ID)
+    WHERE   1 = 1
+        AND C.ID = %s
+        AND TO_DATE('%s', 'DD/MM/YYYY') BETWEEN DATA_INICIO AND NVL(DATA_FIM, SYSDATE)
+        AND D.VALIDO = 1
+"""
+
+#   Consulta retorna todos os talhões do periodo selecionado
+TALHAO_ALL = """
+    SELECT  E.NOME_FAZENDA
+        ,   C.NOME_TALHAO
+        ,   D.AREA
+        ,   SDO_UTIL.TO_WKTGEOMETRY(D.GEOM) GEOM
+    FROM TALHAO_CADASTRO C
+    JOIN TALHAO_GEOM D ON(C.ID = D.TALHAO_CAD_ID)
+    JOIN TALHAO_FAZENDA E ON(E.ID = C.FAZENDA_ID)
+    WHERE   1 = 1
+        AND TO_DATE('%s', 'DD/MM/YYYY') BETWEEN DATA_INICIO AND NVL(DATA_FIM, SYSDATE)
+        AND D.VALIDO = 1
+"""
+
+
+SELECT_TALHAO = """
+WITH 
+    REL1 AS
+        (        
+            SELECT  A.ID
+                ,   A.DATA
+                ,   B.DATA_INICIO
+                ,   B.DATA_FIM
+                ,   C.ID TALHAO_ID
+                ,   C.NOME_TALHAO
+                ,   D.ID FAZENDA_ID
+                ,   D.NOME_FAZENDA
+                ,   JSON_VALUE('%s', '$' RETURNING SDO_GEOMETRY) VALID 
+                ,   B.GEOM
+                ,   B.AREA AREA_TALHAO
+            FROM INTERPOLACAO_CADASTRO A
+            CROSS JOIN TALHAO_GEOM  B
+            JOIN TALHAO_CADASTRO C ON(B.TALHAO_CAD_ID = C.ID)
+            JOIN TALHAO_FAZENDA D ON(C.FAZENDA_ID = D.ID)
+            WHERE A.ID = %s
+        ),
+    SEL_JSON AS
+        (
+            SELECT  TALHAO_ID
+                ,   NOME_TALHAO
+                ,   FAZENDA_ID
+                ,   NOME_FAZENDA
+                ,   ROUND(((SDO_GEOM.SDO_AREA(VALID, .005)/10000)/AREA_TALHAO) * 100,2) PERCENTUAL
+            FROM REL1 A
+            WHERE SDO_RELATE(A.GEOM, A.VALID, 'mask=ANYINTERACT') = 'TRUE'
+                AND A.DATA BETWEEN A.DATA_INICIO AND NVL(A.DATA_FIM, SYSDATE)            
+        )
+    SELECT JSON_OBJECT(*) JSON_SEL FROM SEL_JSON
+"""
+
+SELECT_TALHAO_ABRANGENCIA = """
+    SELECT  A.DESCRICAO
+        ,   C.NOME_TALHAO
+        ,   D.DESCRICAO NOME_ARTIBUTO
+        ,   SDO_UTIL.TO_WKTGEOMETRY(E.GEOM) GEOM
+    FROM INTERPOLACAO_CADASTRO A
+    JOIN INTERPOLACAO_ABRANGENCIA B ON(A.ID = B.INTERPOLACAO_ID)
+    JOIN TALHAO_CADASTRO C ON(C.ID = B.TALHAO_ID)
+    JOIN ATRIBUTO_CADASTRO D ON(D.ID = A.ATRIBUTO_ID)
+    JOIN TALHAO_GEOM E ON(C.ID = E.TALHAO_CAD_ID)
+    WHERE A.DATA BETWEEN DATA_INICIO AND NVL(DATA_FIM, SYSDATE)
+    AND A.ID = %s
+"""
+
+

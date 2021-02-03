@@ -1,0 +1,91 @@
+PALETA_NOME = """
+WITH 
+    COR AS
+        (
+            SELECT  CASE WHEN C.PALETA_PADRAO = 0   THEN n'PERSONALIZADO'   ELSE A.NOME_PALETA      END NOME_PALETA
+                ,   CASE WHEN C.COMPLEMENTO = 0     THEN NULL               ELSE B.COMPLEMENTO      END COMPLEMENTO
+                ,   CASE WHEN C.VALOR_INICIAL = 0   THEN NULL               ELSE B.VALOR_INICIAL    END VALOR_INICIAL
+                ,   CASE WHEN C.VALOR_FINAL = 0     THEN NULL               ELSE B.VALOR_FINAL      END VALOR_FINAL
+                ,   D.UNIDADE_MEDIDA
+                ,   B.HEXADECIMAL
+            FROM PALETA_CADASTRO A
+            JOIN PALETA_COR B ON (A.ID = B.PALETA_ID)
+            JOIN ATRIBUTO_COR C ON(A.ID = C.PALETA_ID)
+            JOIN ATRIBUTO_CADASTRO D ON(D.ID = C.ATRIBUTO_ID)
+            WHERE A.NOME_PALETA = '%s' 
+        )
+        SELECT  NOME_PALETA
+            ,   COMPLEMENTO
+            ,   VALOR_INICIAL
+            ,   VALOR_FINAL
+            ,   UNIDADE_MEDIDA
+            ,   HEXADECIMAL
+            ,   COMPLEMENTO||' '||VALOR_INICIAL||' '||VALOR_FINAL||' '||UNIDADE_MEDIDA LEGENDA
+        FROM COR
+"""
+
+PALETA_ATRIBUTO = """
+WITH 
+    COR AS
+        (
+            SELECT  CASE WHEN C.PALETA_PADRAO = 0   THEN n'PERSONALIZADO'   ELSE A.NOME_PALETA      END NOME_PALETA
+                ,   CASE WHEN C.COMPLEMENTO = 0     THEN NULL               ELSE B.COMPLEMENTO      END COMPLEMENTO
+                ,   CASE WHEN C.VALOR_INICIAL = 0   THEN NULL               ELSE B.VALOR_INICIAL    END VALOR_INICIAL
+                ,   CASE WHEN C.VALOR_FINAL = 0     THEN NULL               ELSE B.VALOR_FINAL      END VALOR_FINAL
+                ,   D.UNIDADE_MEDIDA
+                ,   B.HEXADECIMAL
+            FROM PALETA_CADASTRO A
+            JOIN PALETA_COR B ON (A.ID = B.PALETA_ID)
+            JOIN ATRIBUTO_COR C ON(A.ID = C.PALETA_ID)
+            JOIN ATRIBUTO_CADASTRO D ON(D.ID = C.ATRIBUTO_ID)
+            WHERE D.ID = %s
+        )
+        SELECT  NOME_PALETA
+            ,   COMPLEMENTO
+            ,   VALOR_INICIAL
+            ,   VALOR_FINAL
+            ,   UNIDADE_MEDIDA
+            ,   HEXADECIMAL
+            ,   COMPLEMENTO||' '||VALOR_INICIAL||' '||VALOR_FINAL||' '||UNIDADE_MEDIDA LEGENDA
+        FROM COR            
+"""
+
+PALETA = """
+WITH 
+    COR AS
+        (
+            SELECT  CASE WHEN C.PALETA_PADRAO = 0   THEN n'PERSONALIZADO'   ELSE A.NOME_PALETA      END NOME_PALETA
+                ,   CASE WHEN C.COMPLEMENTO = 0     THEN NULL               ELSE B.COMPLEMENTO      END COMPLEMENTO
+                ,   CASE WHEN C.VALOR_INICIAL = 0   THEN NULL               ELSE B.VALOR_INICIAL    END VALOR_INICIAL
+                ,   CASE WHEN C.VALOR_FINAL = 0     THEN NULL               ELSE B.VALOR_FINAL      END VALOR_FINAL
+                ,   D.UNIDADE_MEDIDA
+                ,   B.HEXADECIMAL
+            FROM PALETA_CADASTRO A
+            JOIN PALETA_COR B ON (A.ID = B.PALETA_ID)
+            JOIN ATRIBUTO_COR C ON(A.ID = C.PALETA_ID)
+            JOIN ATRIBUTO_CADASTRO D ON(D.ID = C.ATRIBUTO_ID)
+            WHERE A.NOME_PALETA = '%s' AND C.ID = %s
+        )
+        SELECT  NOME_PALETA
+            ,   COMPLEMENTO
+            ,   VALOR_INICIAL
+            ,   VALOR_FINAL
+            ,   UNIDADE_MEDIDA
+            ,   HEXADECIMAL
+            ,   COMPLEMENTO||' '||VALOR_INICIAL||' '||VALOR_FINAL||' '||UNIDADE_MEDIDA LEGENDA
+        FROM COR   
+"""
+
+
+PALETA_LEGENDA = """
+SELECT  B.HEXADECIMAL
+    ,   B.VALOR_INICIAL
+    ,   B.VALOR_FINAL
+    ,   B.COMPLEMENTO LEGENDA
+FROM PALETA_CADASTRO A
+JOIN PALETA_COR B ON(A.ID = B.PALETA_ID)
+JOIN ATRIBUTO_COR C ON(A.ID = C.PALETA_ID)
+JOIN INTERPOLACAO_CADASTRO D ON(D.ATRIBUTO_ID = C.ATRIBUTO_ID)
+WHERE D.ID = %s
+ORDER BY B.ORDEM DESC
+"""
